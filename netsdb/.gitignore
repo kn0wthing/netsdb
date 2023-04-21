@@ -1,0 +1,47 @@
+.sconsign.dblite
+CatalogDir/
+CatalogDir_localhost_8109/
+bin/
+build/
+libraries/
+logs/
+selfLearningDB/
+
+# VS code generated #
+#####################
+.vscode/
+
+# OS generated files #
+######################
+.DS_Store
+ehthumbs.db
+Icon
+Thumbs.db
+.tmtags
+.idea
+tags
+vendor.tags
+tmtagsHistory
+*.sublime-project
+*.sublime-workspace
+.bundle
+
+# Conf Files #
+##############
+/conf/cluster/cluster_info.txt
+/conf/serverlist
+
+# Private keys #
+################
+*.pem
+#Python Cache#
+##############
+**/__pycache__/
+
+rf_mm_dbrf_mm_set
+
+#Download datasets#
+model-inference/decisionTree/experiments/dataset/
+model-inference/decisionTree/experiments/catboost_cached_datasets/
+model-inference/decisionTree/experiments/mycache/
+model-inference/decisionTree/experiments/models/
