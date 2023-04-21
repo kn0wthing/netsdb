@@ -1337,6 +1337,8 @@ common_env.Program('bin/RedditFeatureExtractor', ['build/tests/RedditFeatureExtr
 common_env.Program(
     'bin/LSTMTest', ['build/tests/LSTMTest.cc'] + all + pdb_client)
 common_env.Program(
+    'bin/MhaTest', ['build/tests/MhaTest.cc'] + all + pdb_client)
+common_env.Program(
     'bin/LSTMDebug', ['build/tests/LSTMDebug.cc'] + all + pdb_client)
 common_env.Program('bin/Conv2dMemFuseTest', ['build/tests/Conv2dMemFuseTest.cc',
                                              'build/conv2d_memory_fusion/ImageUtils.cc', 'build/FF/FFMatrixUtil.cc'] + all + pdb_client)
@@ -1453,6 +1455,7 @@ common_env.Depends(pdbTest, [
     'bin/TestLDA',
     'bin/FFTest',
     'bin/LSTMTest',
+    'bin/MhaTest',
     'libraries/libCartesianJoin.so',
     'libraries/libEmployeeSelection.so',
     'libraries/libFinalSelection.so',
@@ -2050,6 +2053,22 @@ libLSTMTest = common_env.Alias('libLSTMTest', [
     'libraries/libLSTMHiddenState.so',
 ])
 
+libMhaTest = common_env.Alias('libMhaTest', [
+    'bin/pdb-cluster',
+    'bin/pdb-server',
+
+    'bin/MhaTest',
+    # Other libraries from src/LSTM
+    'libraries/libFFMatrixBlock.so',
+    'libraries/libFFMatrixData.so',
+    'libraries/libFFMatrixMeta.so',
+
+    'libraries/libFFMatrixBlockScanner.so',
+    'libraries/libFFMatrixWriter.so',
+
+    'libraries/libFFInputLayerJoin.so',
+    'libraries/libFFAggMatrix.so',
+])
 
 libDFTest = common_env.Alias('libDFTest', [
     'bin/pdb-cluster',
