@@ -14,40 +14,47 @@
 #include "FFInputLayerJoin.h"
 #include "FFAggMatrix.h"
 
-#include "LSTMThreeWaySum.h"
-#include "LSTMTwoSum.h"
-#include "LSTMHiddenState.h"
+#include "FFMatrixBlock.h"
+#include "FFMatrixUtil.h"
+#include "SimpleFF.h"
 
 #include "PDBClient.h"
 
 using namespace std;
 
-void print(pdb::PDBClient &pdbClient, string dbName, string setName) {
+void print(pdb::PDBClient &pdbClient, string dbName, string setName)
+{
   auto it = pdbClient.getSetIterator<FFMatrixBlock>(dbName, setName);
 
-  for (auto r : it) {
+  for (auto r : it)
+  {
     double *data = r->getRawDataHandle()->c_ptr();
-    for (int i = 0; i < r->getRowNums() * r->getColNums(); i++) {
+    for (int i = 0; i < r->getRowNums() * r->getColNums(); i++)
+    {
       std::cout << data[i] << ",";
     }
   }
 }
 
-void print_stats(pdb::PDBClient &pdbClient, string dbName, string setName) {
+void print_stats(pdb::PDBClient &pdbClient, string dbName, string setName)
+{
   int rows = 0, cols = 0, blocks = 0;
   int totalRows = 0, totalCols = 0;
   int blockRows = 0, blockCols = 0;
   auto it = pdbClient.getSetIterator<FFMatrixBlock>(dbName, setName);
 
-  for (auto r : it) {
+  for (auto r : it)
+  {
     std::cout << r->getBlockRowIndex() << "," << r->getBlockColIndex() << ";";
     rows = r->getRowNums();
     cols = r->getColNums();
-    if (r->getBlockRowIndex() == 0) {
+    if (r->getBlockRowIndex() == 0)
+    {
       totalRows += r->getRowNums();
       blockRows += 1;
     }
-    if (r->getBlockColIndex() == 0) {
+    if (r->getBlockColIndex() == 0)
+    {
       totalCols += r->getColNums();
       blockCols += 1;
     }
@@ -62,7 +69,8 @@ void print_stats(pdb::PDBClient &pdbClient, string dbName, string setName) {
 
 void loadMatrix(pdb::PDBClient &pdbClient, String dbName, String setName,
                 int totalX, int totalY, int blockX, int blockY, int initVal,
-                std::string &errMsg) {
+                std::string &errMsg)
+{
 
   int total = 0;
   pdb::makeObjectAllocatorBlock(128 * 1024 * 1024, true);
@@ -73,19 +81,25 @@ void loadMatrix(pdb::PDBClient &pdbClient, String dbName, String setName,
   int numXBlocks = ceil(totalX / (double)blockX);
   int numYBlocks = ceil(totalY / (double)blockY);
 
-  try {
-    for (int i = 0; i < numXBlocks; i++) {
-      for (int j = 0; j < numYBlocks; j++) {
+  try
+  {
+    for (int i = 0; i < numXBlocks; i++)
+    {
+      for (int j = 0; j < numYBlocks; j++)
+      {
         pdb::Handle<FFMatrixBlock> myData =
             pdb::makeObject<FFMatrixBlock>(i, j, blockX, blockY);
 
-        for (int ii = 0; ii < blockX; ii++) {
-          for (int jj = 0; jj < blockY; jj++) {
+        for (int ii = 0; ii < blockX; ii++)
+        {
+          for (int jj = 0; jj < blockY; jj++)
+          {
             // row = i * blockX + ii, col = j * blockY + jj
             double data =
                 (i * blockX + ii) >= totalX || (j * blockY + jj) >= totalY
                     ? 0
-                    : initVal == -1 ? i + j + ii + jj : initVal;
+                : initVal == -1 ? i + j + ii + jj
+                                : initVal;
             (*(myData->getRawDataHandle()))[ii * blockY + jj] = data;
           }
         }
@@ -97,11 +111,14 @@ void loadMatrix(pdb::PDBClient &pdbClient, String dbName, String setName,
     }
     if (!pdbClient.sendData<FFMatrixBlock>(
             std::pair<std::string, std::string>(setName, dbName), storeMatrix1,
-            errMsg)) {
+            errMsg))
+    {
       std::cout << "Failed to send data to dispatcher server" << std::endl;
       exit(1);
     }
-  } catch (NotEnoughSpace &e) {
+  }
+  catch (NotEnoughSpace &e)
+  {
     std::cout << "Failed to send data to dispatcher server" << std::endl;
     exit(1);
   }
@@ -113,38 +130,49 @@ void loadMatrix(pdb::PDBClient &pdbClient, String dbName, String setName,
   pdbClient.flushData(errMsg);
 }
 
-void loadLibrary(pdb::PDBClient &pdbClient, string path) {
+void loadLibrary(pdb::PDBClient &pdbClient, string path)
+{
   string errMsg;
-  if (!pdbClient.registerType(path, errMsg)) {
+  if (!pdbClient.registerType(path, errMsg))
+  {
     cout << "Couldnt include " << path << ": " << errMsg << endl;
     exit(-1);
   }
 }
 
 void createSet(pdb::PDBClient &pdbClient, string dbName, string setName,
-               string setName1) {
+               string setName1)
+{
   string errMsg;
   if (!pdbClient.createSet<FFMatrixBlock>(
           dbName, setName, errMsg, (size_t)64 * (size_t)1024 * (size_t)1024,
-          setName1)) {
+          setName1))
+  {
     cout << "Not able to create set: " + errMsg;
     exit(-1);
-  } else {
+  }
+  else
+  {
     cout << "Created set.\n";
   }
 }
 
-void createDatabase(pdb::PDBClient &pdbClient, string dbName) {
+void createDatabase(pdb::PDBClient &pdbClient, string dbName)
+{
   string errMsg;
-  if (!pdbClient.createDatabase(dbName, errMsg)) {
+  if (!pdbClient.createDatabase(dbName, errMsg))
+  {
     cout << "Not able to create database: " << errMsg << endl;
     exit(-1);
-  } else {
+  }
+  else
+  {
     cout << "Created database" << endl;
   }
 }
 
-int main(int argc, char *argv[]) {
+int main(int argc, char *argv[])
+{
   string errMsg;
 
   string masterIp = "localhost";
@@ -166,7 +194,6 @@ int main(int argc, char *argv[]) {
   loadLibrary(pdbClient, "libraries/libLSTMTwoSum.so");
   loadLibrary(pdbClient, "libraries/libLSTMHiddenState.so");
 
-
   createDatabase(pdbClient, "mha");
 
   createSet(pdbClient, "mha", "input", "Input");
@@ -179,125 +206,102 @@ int main(int argc, char *argv[]) {
   createSet(pdbClient, "mha", "b_q", "WInput");
   createSet(pdbClient, "mha", "b_v", "WOutput");
 
-//   createSet(pdbClient, "mha", "u_f", "UForget");
-//   createSet(pdbClient, "mha", "u_i", "UInput");
-//   createSet(pdbClient, "mha", "u_o", "UOutput");
-//   createSet(pdbClient, "mha", "u_c", "UCellState");
+  // ff:: createDatabase(pdbClient, "ff");
+  // ff:: setup(pdbClient, "ff");
 
-//   createSet(pdbClient, "mha", "b_f", "BForget");
-//   createSet(pdbClient, "mha", "b_i", "BInput");
-//   createSet(pdbClient, "mha", "b_o", "BOutput");
-//   createSet(pdbClient, "mha", "b_c", "BCellState");
+  // if not working add ff::
+  ff::createSet(pdbClient, "ff", "inputs", "inputs", 64);
+  ff::createSet(pdbClient, "ff", "label", "label", 64);
 
-//   createSet(pdbClient, "mha", "c_t", "CellStateNext");
-//   createSet(pdbClient, "mha", "h_t", "HiddenStateNext");
-//   createSet(pdbClient, "mha", "i_t", "InputGate");
+  ff::createSet(pdbClient, "ff", "w1", "W1", 64);
+  ff::createSet(pdbClient, "ff", "b1", "B1", 64);
+
+  ff::createSet(pdbClient, "ff", "wo", "WO", 64);
+  ff::createSet(pdbClient, "ff", "bo", "BO", 64);
+
+  ff::createSet(pdbClient, "ff", "output", "Output", 256);
 
   int context_size = 10; // features
-  int B = 1; // batch size
-  int em_size = 64; // output labels?
+  int B = 1;             // batch size
+  int em_size = 64;      // output labels?
   int block_x = 16;
   int block_y = 16;
-// Feed forward q,k,v to w and b
+  // Feed forward q,k,v to w and b
 
   loadMatrix(pdbClient, "mha", "input", context_size, em_size, block_x, block_y, 2, errMsg);
   loadMatrix(pdbClient, "mha", "w_k", em_size, em_size, block_x, block_y, 1, errMsg);
   loadMatrix(pdbClient, "mha", "w_q", em_size, em_size, block_x, block_y, 1, errMsg);
   loadMatrix(pdbClient, "mha", "w_v", em_size, em_size, block_x, block_y, 1, errMsg);
 
+  // context size  = batch size and numFeatures = em_size
+  ff::loadMatrix(pdbClient, "mha", "w0", 16, em_size, block_x, block_y, false, false, errMsg);
+  ff::loadMatrix(pdbClient, "mha", "w1", context_size, 16, block_x, block_y, false, false, errMsg);
+  ff::loadMatrix(pdbClient, "mha", "b0", 16, 1, block_x, 1, false, true, errMsg);
+  ff::loadMatrix(pdbClient, "mha", "b1", context_size, 1, block_x, 1, false, true, errMsg);
+
+  double dropout_rate = 0.5;
   {
     const pdb::UseTemporaryAllocationBlock tempBlock{1024 * 1024 * 128};
 
     // ----------------------------------------------
-        // make the computation
-        pdb::Handle<pdb::Computation> readA =
-            makeObject<FFMatrixBlockScanner>("mha", "input");
-        pdb::Handle<pdb::Computation> readB =
-            makeObject<FFMatrixBlockScanner>("mha", "w_k");
+    // make the computation
+    pdb::Handle<pdb::Computation> readA =
+        makeObject<FFMatrixBlockScanner>("mha", "input");
+    pdb::Handle<pdb::Computation> readB =
+        makeObject<FFMatrixBlockScanner>("mha", "w_k");
 
-        pdb::Handle<pdb::Computation> key_matrix = pdb::makeObject<FFTransposeMult>();
-        key_matrix->setInput(0, readA);
-        key_matrix->setInput(1, readB);
+    pdb::Handle<pdb::Computation> key_matrix = pdb::makeObject<FFTransposeMult>();
+    key_matrix->setInput(0, readA);
+    key_matrix->setInput(1, readB);
 
-        pdb::Handle<pdb::Computation> readC =
-            makeObject<FFMatrixBlockScanner>("mha", "w_q");
-        pdb::Handle<pdb::Computation> query_matrix = pdb::makeObject<FFTransposeMult>();
-        query_matrix->setInput(0, readA);
-        query_matrix->setInput(1, readC);
+    pdb::Handle<pdb::Computation> readC =
+        makeObject<FFMatrixBlockScanner>("mha", "w_q");
+    pdb::Handle<pdb::Computation> query_matrix = pdb::makeObject<FFTransposeMult>();
+    query_matrix->setInput(0, readA);
+    query_matrix->setInput(1, readC);
 
+    pdb::Handle<pdb::Computation> readD =
+        makeObject<FFMatrixBlockScanner>("mha", "w_v");
+    pdb::Handle<pdb::Computation> value_matrix = pdb::makeObject<FFTransposeMult>();
+    value_matrix->setInput(0, readA);
+    value_matrix->setInput(1, readB);
 
-        pdb::Handle<pdb::Computation> readD =
-            makeObject<FFMatrixBlockScanner>("mha", "w_v");
-        pdb::Handle<pdb::Computation> value_matrix = pdb::makeObject<FFTransposeMult>();
-        value_matrix->setInput(0, readA);
-        value_matrix->setInput(1, readB);
+    pdb::Handle<pdb::Computation> attention1 = pdb::makeObject<FFTransposeMult>();
+    attention1->setInput(0, query_matrix);
+    attention1->setInput(1, key_matrix);
 
-        pdb::Handle<pdb::Computation> attention1 = pdb::makeObject<FFTransposeMult>();
-        attention1->setInput(0, query_matrix);
-        attention1->setInput(1, key_matrix);
+    pdb::Handle<pdb::Computation> intermediateWriter =
+        pdb::makeObject<FFMatrixWriter>("mha", "i-0");
+    intermediateWriter->setInput(attention1);
 
-        pdb::Handle<pdb::Computation> intermediateWriter =
-            pdb::makeObject<FFMatrixWriter>(database, "yo");
-        intermediateWriter->setInput(attention1);
+    pdb::Handle<pdb::Computation> readF =
+        makeObject<FFMatrixBlockScanner>("mha", "i-0");
 
-        pdb::Handle<pdb::Computation> readF =
-            makeObject<FFMatrixBlockScanner>(database, "yo");
+    pdb::Handle<pdb::Computation> expSum = pdb::makeObject<FFRowAggregate>();
+    expSum->setInput(readF);
 
-        pdb::Handle<pdb::Computation> expSum = pdb::makeObject<FFRowAggregate>();
-        expSum->setInput(readF);
+    pdb::Handle<pdb::Computation> softmax = pdb::makeObject<FFOutputLayer>();
+    softmax->setInput(0, readF);
+    softmax->setInput(1, expSum);
 
-        pdb::Handle<pdb::Computation> softmax = pdb::makeObject<FFOutputLayer>();
-        softmax->setInput(0, readF);
-        softmax->setInput(1, expSum);
+    pdb::Handle<pdb::Computation> attention = pdb::makeObject<FFTransposeMult>();
+    attention->setInput(0, softmax);
+    attention->setInput(1, value_matrix);
 
-        pdb::Handle<pdb::Computation> attention = pdb::makeObject<FFTransposeMult>();
-        attention->setInput(0, softmax);
-        attention->setInput(1, value_matrix);
+    pdb::Handle<pdb::Computation> intermediateWriter =
+        pdb::makeObject<FFMatrixWriter>("mha", "ou");
+    intermediateWriter->setInput(attention);
 
-    // -----------------------------------------------
-
-    pdb::Handle<pdb::Computation> w_f =
-        pdb::makeObject<FFMatrixBlockScanner>("lstm", "w_f");
-    pdb::Handle<pdb::Computation> x_t =
-        pdb::makeObject<FFMatrixBlockScanner>("lstm", "x_t");
-
-    // multiply
-    Handle<Computation> w_forget_x_join = makeObject<FFInputLayerJoin>();
-    w_forget_x_join->setInput(0, w_f);
-    w_forget_x_join->setInput(1, x_t);
-
-    Handle<Computation> w_forget_x_agg = makeObject<FFAggMatrix>();
-    w_forget_x_agg->setInput(w_forget_x_join);
-
-
-    pdb::Handle<pdb::Computation> u_f =
-        pdb::makeObject<FFMatrixBlockScanner>("lstm", "u_f");
-    pdb::Handle<pdb::Computation> h_t_1 =
-        pdb::makeObject<FFMatrixBlockScanner>("lstm", "h_t_1");
-
-    Handle<Computation> u_forget_h_join = makeObject<FFInputLayerJoin>();
-    u_forget_h_join->setInput(0, u_f);
-    u_forget_h_join->setInput(1, h_t_1);
-
-    Handle<Computation> u_forget_h_agg = makeObject<FFAggMatrix>();
-    u_forget_h_agg->setInput(u_forget_h_join);
-
-
-    pdb::Handle<pdb::Computation> b_f =
-        pdb::makeObject<FFMatrixBlockScanner>("lstm", "b_f");
-
-    // add and sigmod
-    pdb::Handle<pdb::Computation> sum = pdb::makeObject<LSTMThreeWaySum>();
-    sum->setInput(0, w_forget_x_agg);
-    sum->setInput(1, u_forget_h_agg);
-    sum->setInput(2, b_f);
+    ff::inference_unit(pdbClient, "ff", "w1", "wo", "ou", "b1", "bo",
+                       "output", dropout_rate);
 
     // make the writer
     pdb::Handle<pdb::Computation> myWriter = pdb::makeObject<FFMatrixWriter>("lstm", "f_t");
     myWriter->setInput(sum);
 
     // run the computation
-    if (!pdbClient.executeComputations(errMsg, myWriter)) {
+    if (!pdbClient.executeComputations(errMsg, myWriter))
+    {
       std::cout << "Computation failed. Message was: " << errMsg << "\n";
       return 1;
     }
@@ -320,7 +324,7 @@ int main(int argc, char *argv[]) {
 
   {
     const pdb::UseTemporaryAllocationBlock tempBlock{1024 * 1024 * 128};
-    
+
     pdb::Handle<pdb::Computation> w_i =
         pdb::makeObject<FFMatrixBlockScanner>("lstm", "w_i");
     pdb::Handle<pdb::Computation> x_t =
@@ -334,7 +338,6 @@ int main(int argc, char *argv[]) {
     Handle<Computation> w_input_x_agg = makeObject<FFAggMatrix>();
     w_input_x_agg->setInput(w_input_x_join);
 
-
     pdb::Handle<pdb::Computation> u_i =
         pdb::makeObject<FFMatrixBlockScanner>("lstm", "u_i");
     pdb::Handle<pdb::Computation> h_t_1 =
@@ -346,7 +349,6 @@ int main(int argc, char *argv[]) {
 
     Handle<Computation> u_input_h_agg = makeObject<FFAggMatrix>();
     u_input_h_agg->setInput(u_input_h_join);
-
 
     pdb::Handle<pdb::Computation> b_i =
         pdb::makeObject<FFMatrixBlockScanner>("lstm", "b_i");
@@ -362,7 +364,8 @@ int main(int argc, char *argv[]) {
     myWriter->setInput(sum);
 
     // run the computation
-    if (!pdbClient.executeComputations(errMsg, myWriter)) {
+    if (!pdbClient.executeComputations(errMsg, myWriter))
+    {
       std::cout << "Computation failed. Message was: " << errMsg << "\n";
       return 1;
     }
@@ -385,7 +388,7 @@ int main(int argc, char *argv[]) {
 
   {
     const pdb::UseTemporaryAllocationBlock tempBlock{1024 * 1024 * 128};
-    
+
     pdb::Handle<pdb::Computation> w_o =
         pdb::makeObject<FFMatrixBlockScanner>("lstm", "w_o");
     pdb::Handle<pdb::Computation> x_t =
@@ -399,7 +402,6 @@ int main(int argc, char *argv[]) {
     Handle<Computation> w_output_x_agg = makeObject<FFAggMatrix>();
     w_output_x_agg->setInput(w_output_x_join);
 
-
     pdb::Handle<pdb::Computation> u_o =
         pdb::makeObject<FFMatrixBlockScanner>("lstm", "u_o");
     pdb::Handle<pdb::Computation> h_t_1 =
@@ -411,7 +413,6 @@ int main(int argc, char *argv[]) {
 
     Handle<Computation> u_output_h_agg = makeObject<FFAggMatrix>();
     u_output_h_agg->setInput(u_output_h_join);
-
 
     pdb::Handle<pdb::Computation> b_o =
         pdb::makeObject<FFMatrixBlockScanner>("lstm", "b_o");
@@ -427,7 +428,8 @@ int main(int argc, char *argv[]) {
     myWriter->setInput(sum);
 
     // run the computation
-    if (!pdbClient.executeComputations(errMsg, myWriter)) {
+    if (!pdbClient.executeComputations(errMsg, myWriter))
+    {
       std::cout << "Computation failed. Message was: " << errMsg << "\n";
       return 1;
     }
@@ -450,7 +452,7 @@ int main(int argc, char *argv[]) {
 
   {
     const pdb::UseTemporaryAllocationBlock tempBlock{1024 * 1024 * 128};
-    
+
     pdb::Handle<pdb::Computation> w_c =
         pdb::makeObject<FFMatrixBlockScanner>("lstm", "w_c");
     pdb::Handle<pdb::Computation> x_t =
@@ -464,7 +466,6 @@ int main(int argc, char *argv[]) {
     Handle<Computation> w_cell_state_agg = makeObject<FFAggMatrix>();
     w_cell_state_agg->setInput(w_cell_state_join);
 
-
     pdb::Handle<pdb::Computation> u_c =
         pdb::makeObject<FFMatrixBlockScanner>("lstm", "u_c");
     pdb::Handle<pdb::Computation> h_t_1 =
@@ -476,7 +477,6 @@ int main(int argc, char *argv[]) {
 
     Handle<Computation> u_cell_state_h_agg = makeObject<FFAggMatrix>();
     u_cell_state_h_agg->setInput(u_cell_state_h_join);
-
 
     pdb::Handle<pdb::Computation> b_c =
         pdb::makeObject<FFMatrixBlockScanner>("lstm", "b_c");
@@ -492,7 +492,8 @@ int main(int argc, char *argv[]) {
     myWriter->setInput(sum);
 
     // run the computation
-    if (!pdbClient.executeComputations(errMsg, myWriter)) {
+    if (!pdbClient.executeComputations(errMsg, myWriter))
+    {
       std::cout << "Computation failed. Message was: " << errMsg << "\n";
       return 1;
     }
@@ -513,7 +514,7 @@ int main(int argc, char *argv[]) {
 
   {
     const pdb::UseTemporaryAllocationBlock tempBlock{1024 * 1024 * 128};
-    
+
     pdb::Handle<pdb::Computation> f_t =
         pdb::makeObject<FFMatrixBlockScanner>("lstm", "f_t");
     pdb::Handle<pdb::Computation> c_t_1 =
@@ -549,7 +550,8 @@ int main(int argc, char *argv[]) {
     myWriter->setInput(sum);
 
     // run the computation
-    if (!pdbClient.executeComputations(errMsg, myWriter)) {
+    if (!pdbClient.executeComputations(errMsg, myWriter))
+    {
       std::cout << "Computation failed. Message was: " << errMsg << "\n";
       return 1;
     }
@@ -567,7 +569,7 @@ int main(int argc, char *argv[]) {
 
   {
     const pdb::UseTemporaryAllocationBlock tempBlock{1024 * 1024 * 128};
-    
+
     pdb::Handle<pdb::Computation> o_t =
         pdb::makeObject<FFMatrixBlockScanner>("lstm", "o_t");
     pdb::Handle<pdb::Computation> c_t_1 =
@@ -586,7 +588,8 @@ int main(int argc, char *argv[]) {
     myWriter->setInput(hidden_state_agg);
 
     // run the computation
-    if (!pdbClient.executeComputations(errMsg, myWriter)) {
+    if (!pdbClient.executeComputations(errMsg, myWriter))
+    {
       std::cout << "Computation failed. Message was: " << errMsg << "\n";
       return 1;
     }
@@ -599,7 +602,6 @@ int main(int argc, char *argv[]) {
     print_stats(pdbClient, "lstm", "c_t");
     print_stats(pdbClient, "lstm", "h_t");
   }
-
 
   return 0;
 }
