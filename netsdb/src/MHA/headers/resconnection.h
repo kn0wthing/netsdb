@@ -29,11 +29,15 @@ public:
   Lambda<bool> getSelection(Handle<FFMatrixBlock> in1,
                             Handle<FFMatrixBlock> in2) override {
 
-    return makeLambda(
-        in1, in2, [](Handle<FFMatrixBlock> &in1, Handle<FFMatrixBlock> &in2) {
-          return in1->getBlockColIndex() == in2->getBlockColIndex() 
-                && in1->getBlockRowIndex() == in2->getBlockRowIndex();
-        });
+    return (makeLambda(in1,
+                          [](Handle<FFMatrixBlock> &in1) { return true; }) && 
+            makeLambda(in2,
+                          [](Handle<FFMatrixBlock> &in2) { return true; }));
+    // return makeLambda(
+    //     in1, in2, [](Handle<FFMatrixBlock> &in1, Handle<FFMatrixBlock> &in2) {
+    //       return in1->getBlockColIndex() == in2->getBlockColIndex() 
+    //             && in1->getBlockRowIndex() == in2->getBlockRowIndex();
+    //     });
   }
 
   Lambda<Handle<FFMatrixBlock>>
