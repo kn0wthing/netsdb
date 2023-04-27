@@ -1,5 +1,5 @@
-#ifndef LAYER_NORM_H
-#define LAYER_NORM_H
+#ifndef MHA_LAYER_NORM_H
+#define MHA_LAYER_NORM_H
 
 #include "FFMatrixBlock.h"
 #include "SelectionComp.h"
@@ -12,12 +12,12 @@ using namespace pdb;
 
 // enum class SumActivation { Sigmod = 1, Tanh };
 
-class layernorm : public SelectionComp<FFMatrixBlock, FFMatrixBlock> {
+class MHALayerNorm : public SelectionComp<FFMatrixBlock, FFMatrixBlock> {
 
 public:
   ENABLE_DEEP_COPY
 
-  layernorm() {
+  MHALayerNorm() {
     }
 
     // layernorm(uint32_t sizeEmbed, uint32_t sizeDense0, uint32_t sizeDense1) {

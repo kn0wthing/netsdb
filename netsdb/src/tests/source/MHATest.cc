@@ -7,8 +7,8 @@
 #include "FFMatrixBlock.h"
 #include "FFMatrixMeta.h"
 #include "FFMatrixData.h"
-#include"layernorm.h"
-#include"resconnection.h"
+#include "MHALayerNorm.h"
+#include "MHAResConnection.h"
 #include "FFMatrixBlockScanner.h"
 #include "FFTransposeMult.h"
 #include "FFRowAggregate.h"
@@ -212,8 +212,8 @@ int main(int argc, char *argv[])
   loadLibrary(pdbClient, "libraries/libFFInputLayerJoin.so");
   loadLibrary(pdbClient, "libraries/libFFAggMatrix.so");
 
-  loadLibrary(pdbClient, "libraries/layernorm.so");
-  loadLibrary(pdbClient, "libraries/resconnection.so");
+  loadLibrary(pdbClient, "libraries/libMHALayerNorm.so");
+  loadLibrary(pdbClient, "libraries/libMHAResConnection.so");
 
 
   createDatabase(pdbClient, "mha");
@@ -324,11 +324,11 @@ int main(int argc, char *argv[])
 
     pdb::Handle<pdb::Computation> readG =
         makeObject<FFMatrixBlockScanner>("mha", "output");
-    pdb::Handle<pdb::Computation> layernormalization = pdb::makeObject<layernorm>();
+    pdb::Handle<pdb::Computation> layernormalization = pdb::makeObject<MHALayerNorm>();
     layernormalization->setInput(0, readG);
     
     
-    pdb::Handle<pdb::Computation> rescon = pdb::makeObject<layernorm>();
+    pdb::Handle<pdb::Computation> rescon = pdb::makeObject<MHAResConnection>();
     rescon->setInput(0, readA);
     rescon->setInput(1, layernormalization);
 

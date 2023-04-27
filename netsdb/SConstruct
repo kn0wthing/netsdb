@@ -1442,12 +1442,12 @@ common_env.Program('bin/hybridDedup',
                         'build/FF/FFMatrixUtil.cc', 'build/word2vec/SemanticClassifier.cc'] + all + pdb_client)
 
 # Transformer block
-common_env.SharedLibrary('libraries/layernorm.so',
-                        ['build/MHA/layernorm.cc'] + all)
-common_env.SharedLibrary('libraries/resconnection.so',
-                        ['build/MHA/resconnection.cc'] + all)
-common_env.Program('bin/mhatest', 
-                        ['build/tests/MhaTest.cc', 'build/FF/SimpleFF.cc',
+common_env.SharedLibrary('libraries/libMHALayerNorm.so',
+                        ['build/MHA/MHALayerNorm.cc'] + all)
+common_env.SharedLibrary('libraries/libMHAResConnection.so',
+                        ['build/MHA/MHAResConnection.cc'] + all)
+common_env.Program('bin/MHATest', 
+                        ['build/tests/MHATest.cc', 'build/FF/SimpleFF.cc',
                         'build/FF/FFMatrixUtil.cc'] + all + pdb_client)
 
 # Testing
@@ -1464,7 +1464,7 @@ common_env.Depends(pdbTest, [
     'bin/TestLDA',
     'bin/FFTest',
     'bin/LSTMTest',
-    'bin/MhaTest',
+    'bin/MHATest',
     'libraries/libCartesianJoin.so',
     'libraries/libEmployeeSelection.so',
     'libraries/libFinalSelection.so',
@@ -1999,7 +1999,7 @@ libFFTest = common_env.Alias('libclassifier', [
 libMHATest = common_env.Alias('libtransformer', [
     'bin/pdb-cluster',
     'bin/pdb-server',
-    'bin/mhatest',
+    'bin/MHATest',
     # Other libraries from src/FF
     'libraries/libFFMatrixBlock.so',
     'libraries/libFFMatrixData.so',
@@ -2020,6 +2020,8 @@ libMHATest = common_env.Alias('libtransformer', [
     'libraries/libInferenceResult.so',
     'libraries/libInferenceResultPartition.so',
     'libraries/libFFMatrixPartitioner.so',
+    'libraries/libMHALayerNorm.so',
+    'libraries/libMHAResConnection.so'
 ])
 
 libFFTest = common_env.Alias('libFFTest', [

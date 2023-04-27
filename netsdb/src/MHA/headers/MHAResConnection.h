@@ -1,5 +1,5 @@
-#ifndef RESIDUAL_CONNECTION_H
-#define RESIDUAL_CONNECTION_H
+#ifndef MHA_RESIDUAL_CONNECTION_H
+#define MHA_RESIDUAL_CONNECTION_H
 
 #include "FFMatrixBlock.h"
 #include "JoinComp.h"
@@ -11,7 +11,7 @@
 
 using namespace pdb;
 
-class resconnection : public JoinComp<FFMatrixBlock,FFMatrixBlock, FFMatrixBlock> {
+class MHAResConnection : public JoinComp<FFMatrixBlock,FFMatrixBlock, FFMatrixBlock> {
 
 private:
     uint32_t context_size;
@@ -21,7 +21,7 @@ public:
   ENABLE_DEEP_COPY
 
 
-  resconnection() {
+  MHAResConnection() {
         this->context_size = 10;
         this->embed_size = 64;
     }
