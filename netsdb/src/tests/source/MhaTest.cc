@@ -10,6 +10,10 @@
 #include"layernorm.h"
 #include"resconnection.h"
 #include "FFMatrixBlockScanner.h"
+#include "FFTransposeMult.h"
+#include "FFRowAggregate.h"
+#include "FFOutputLayer.h"
+
 #include "FFMatrixWriter.h"
 
 #include "FFInputLayerJoin.h"
@@ -172,7 +176,7 @@ void createDatabase(pdb::PDBClient &pdbClient, string dbName)
   }
 }
 
-void create_weight_set(pdb::PDBClient & pdbClient, std::string weight_set_name, int numBlock_x, int block_x, int totalNumBlock_y,
+void create_weights_set(pdb::PDBClient & pdbClient, std::string weight_set_name, int numBlock_x, int block_x, int totalNumBlock_y,
 	int block_y) {
 
      std::string errMsg;
@@ -202,6 +206,9 @@ int main(int argc, char *argv[])
   loadLibrary(pdbClient, "libraries/libFFMatrixBlockScanner.so");
   loadLibrary(pdbClient, "libraries/libFFMatrixWriter.so");
 
+  loadLibrary(pdbClient, "libraries/libFFRowAggregate.so");
+  loadLibrary(pdbClient, "libraries/libFFOutputLayer.so");
+  loadLibrary(pdbClient, "libraries/libFFTransposeMult.so");
   loadLibrary(pdbClient, "libraries/libFFInputLayerJoin.so");
   loadLibrary(pdbClient, "libraries/libFFAggMatrix.so");
 
