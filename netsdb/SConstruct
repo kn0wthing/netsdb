@@ -1336,8 +1336,8 @@ common_env.Program('bin/RedditFeatureExtractor', ['build/tests/RedditFeatureExtr
                                                   'build/FF/SimpleFF.cc', 'build/FF/FFMatrixUtil.cc'] + all + pdb_client)
 common_env.Program(
     'bin/LSTMTest', ['build/tests/LSTMTest.cc'] + all + pdb_client)
-common_env.Program(
-    'bin/MhaTest', ['build/tests/MhaTest.cc'] + all + pdb_client)
+# common_env.Program(
+#     'bin/MhaTest', ['build/tests/MhaTest.cc'] + all + pdb_client)
 common_env.Program(
     'bin/LSTMDebug', ['build/tests/LSTMDebug.cc'] + all + pdb_client)
 common_env.Program('bin/Conv2dMemFuseTest', ['build/tests/Conv2dMemFuseTest.cc',
@@ -1440,6 +1440,15 @@ common_env.Program('bin/semanticDedup',
 common_env.Program('bin/hybridDedup',
                         ['build/tests/HybridTestWithDeduplication.cc', 'build/FF/SimpleFF.cc',
                         'build/FF/FFMatrixUtil.cc', 'build/word2vec/SemanticClassifier.cc'] + all + pdb_client)
+
+# Transformer block
+common_env.SharedLibrary('libraries/layernorm.so',
+                        ['build/MHA/layernorm.cc'] + all)
+common_env.SharedLibrary('libraries/resconnection.so',
+                        ['build/MHA/resconnection.cc'] + all)
+common_env.Program('bin/mhatest', 
+                        ['build/tests/MhaTest.cc', 'build/FF/SimpleFF.cc',
+                        'build/FF/FFMatrixUtil.cc'] + all + pdb_client)
 
 # Testing
 pdbTest = common_env.Command(
@@ -1987,6 +1996,31 @@ libFFTest = common_env.Alias('libclassifier', [
     'libraries/libFFMatrixPartitioner.so',
 ])
 
+libMHATest = common_env.Alias('libtransformer', [
+    'bin/pdb-cluster',
+    'bin/pdb-server',
+    'bin/mhatest',
+    # Other libraries from src/FF
+    'libraries/libFFMatrixBlock.so',
+    'libraries/libFFMatrixData.so',
+    'libraries/libFFMatrixMeta.so',
+
+    'libraries/libFFMatrixBlockScanner.so',
+    'libraries/libFFMatrixWriter.so',
+
+    'libraries/libFFInputLayerJoin.so',
+    'libraries/libFFAggMatrix.so',
+
+    'libraries/libFullyConnectedNetwork.so',
+    'libraries/libFFTransposeBiasSum.so',
+    'libraries/libFFTransposeMult.so',
+    'libraries/libFFReluBiasSum.so',
+    'libraries/libFFRowAggregate.so',
+    'libraries/libFFOutputLayer.so',
+    'libraries/libInferenceResult.so',
+    'libraries/libInferenceResultPartition.so',
+    'libraries/libFFMatrixPartitioner.so',
+])
 
 libFFTest = common_env.Alias('libFFTest', [
     'bin/pdb-cluster',
@@ -2053,22 +2087,22 @@ libLSTMTest = common_env.Alias('libLSTMTest', [
     'libraries/libLSTMHiddenState.so',
 ])
 
-libMhaTest = common_env.Alias('libMhaTest', [
-    'bin/pdb-cluster',
-    'bin/pdb-server',
+# libMhaTest = common_env.Alias('libMhaTest', [
+#     'bin/pdb-cluster',
+#     'bin/pdb-server',
 
-    'bin/MhaTest',
-    # Other libraries from src/LSTM
-    'libraries/libFFMatrixBlock.so',
-    'libraries/libFFMatrixData.so',
-    'libraries/libFFMatrixMeta.so',
+#     'bin/MhaTest',
+#     # Other libraries from src/LSTM
+#     'libraries/libFFMatrixBlock.so',
+#     'libraries/libFFMatrixData.so',
+#     'libraries/libFFMatrixMeta.so',
 
-    'libraries/libFFMatrixBlockScanner.so',
-    'libraries/libFFMatrixWriter.so',
+#     'libraries/libFFMatrixBlockScanner.so',
+#     'libraries/libFFMatrixWriter.so',
 
-    'libraries/libFFInputLayerJoin.so',
-    'libraries/libFFAggMatrix.so',
-])
+#     'libraries/libFFInputLayerJoin.so',
+#     'libraries/libFFAggMatrix.so',
+# ])
 
 libDFTest = common_env.Alias('libDFTest', [
     'bin/pdb-cluster',
