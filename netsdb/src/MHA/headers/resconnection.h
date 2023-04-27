@@ -11,7 +11,7 @@
 
 using namespace pdb;
 
-class resconnection : public JoinComp<FFMatrixBlock, FFMatrixBlock> {
+class resconnection : public JoinComp<FFMatrixBlock,FFMatrixBlock, FFMatrixBlock> {
 
 private:
     uint32_t context_size;
