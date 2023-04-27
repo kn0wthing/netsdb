@@ -25,11 +25,6 @@ public:
         this->embed_size = 64;
     }
 
-    // layernorm(uint32_t sizeEmbed, uint32_t sizeDense0, uint32_t sizeDense1) {
-    //     this->sizeEmbed = sizeEmbed;
-    //     this->sizeDense0 = sizeDense0;
-    //     this->sizeDense1 = sizeDense1;
-    // }
 
   Lambda<bool> getSelection(Handle<FFMatrixBlock> in1,
                             Handle<FFMatrixBlock> in2) override {

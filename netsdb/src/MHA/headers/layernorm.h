@@ -12,11 +12,10 @@ using namespace pdb;
 
 // enum class SumActivation { Sigmod = 1, Tanh };
 
-class layernorm : public SelectionComp<FFMatrixBlock> {
+class layernorm : public SelectionComp<FFMatrixBlock, FFMatrixBlock> {
 
 public:
   ENABLE_DEEP_COPY
-
 
   layernorm() {
     }
@@ -52,7 +51,7 @@ public:
             double *in1Data = in1->getValue().rawData->c_ptr();
 
             double sum = 0;
-            
+
             double numOfelements = I*J;
 
             for (int i = 0; i < I * J; i++) {

@@ -315,9 +315,9 @@ int main(int argc, char *argv[])
     attention->setInput(0, softmax);
     attention->setInput(1, value_matrix);
 
-    pdb::Handle<pdb::Computation> intermediateWriter =
+    pdb::Handle<pdb::Computation> intermediateWriter1 =
         pdb::makeObject<FFMatrixWriter>("mha", "ou");
-    intermediateWriter->setInput(attention);
+    intermediateWriter1->setInput(attention);
 
     ff::inference_unit(pdbClient, "mha", "w1", "wo", "ou", "b1", "bo",
                        "output", dropout_rate);
@@ -325,12 +325,12 @@ int main(int argc, char *argv[])
     pdb::Handle<pdb::Computation> readG =
         makeObject<FFMatrixBlockScanner>("mha", "output");
     pdb::Handle<pdb::Computation> layernormalization = pdb::makeObject<layernorm>();
-    sum->setInput(0, readG);
+    layernormalization->setInput(0, readG);
     
     
     pdb::Handle<pdb::Computation> rescon = pdb::makeObject<layernorm>();
-    sum->setInput(0, readA);
-    sum->setInput(1, layernormalization);
+    rescon->setInput(0, readA);
+    rescon->setInput(1, layernormalization);
 
 
     // make the writer
