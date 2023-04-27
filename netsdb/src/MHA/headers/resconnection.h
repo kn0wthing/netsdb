@@ -2,7 +2,8 @@
 #define RESIDUAL_CONNECTION_H
 
 #include "FFMatrixBlock.h"
-#include "SelectionComp.h"
+#include "JoinComp.h"
+
 #include "Lambda.h"
 #include "LambdaCreationFunctions.h"
 
@@ -10,7 +11,7 @@
 
 using namespace pdb;
 
-class resconnection : public SelectionComp<FFMatrixBlock, FFMatrixBlock> {
+class resconnection : public JoinComp<FFMatrixBlock, FFMatrixBlock> {
 
 private:
     uint32_t context_size;
