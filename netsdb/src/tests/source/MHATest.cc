@@ -14,6 +14,12 @@
 #include "FFRowAggregate.h"
 #include "FFOutputLayer.h"
 
+#include "FFMatrixPartitioner.h"
+#include "FFReluBiasSum.h"
+#include "FFTransposeBiasSum.h"
+#include "SparseMatrixBlock.h"
+#include "TensorBlock2D.h"
+
 #include "FFMatrixWriter.h"
 
 #include "FFInputLayerJoin.h"
@@ -70,6 +76,101 @@ void print_stats(pdb::PDBClient &pdbClient, string dbName, string setName)
             << setName << " (" << blockRows << " X " << blockCols << ") ("
             << blocks << ") : (" << totalRows << " x " << totalCols
             << "), Each block size: " << rows << " x " << cols << std::endl;
+}
+
+void inference_unit(pdb::PDBClient &pdbClient, string database, string w1,
+                    string wo, string inputs, string b1, string bo,
+                    string output, double dropout_rate) {
+    string errMsg;
+
+    {
+        const pdb::UseTemporaryAllocationBlock tempBlock{1024 * 1024 * 128};
+
+        // make the computation
+        pdb::Handle<pdb::Computation> readA =
+            makeObject<FFMatrixBlockScanner>(database, w1);
+        pdb::Handle<pdb::Computation> readB =
+            makeObject<FFMatrixBlockScanner>(database, inputs);
+
+        pdb::Handle<pdb::Computation> join = pdb::makeObject<FFTransposeMult>();
+        join->setInput(0, readA);
+        join->setInput(1, readB);
+
+        // make the aggregation
+        pdb::Handle<pdb::Computation> myAggregation =
+            pdb::makeObject<FFAggMatrix>();
+        myAggregation->setInput(join);
+
+        pdb::Handle<pdb::Computation> readC =
+            makeObject<FFMatrixBlockScanner>(database, b1);
+
+        pdb::Handle<pdb::Computation> reluBias =
+            pdb::makeObject<FFReluBiasSum>(dropout_rate);
+        reluBias->setInput(0, myAggregation);
+        reluBias->setInput(1, readC);
+
+        // make the computation
+        pdb::Handle<pdb::Computation> readD =
+            makeObject<FFMatrixBlockScanner>(database, wo);
+
+        pdb::Handle<pdb::Computation> join1 = pdb::makeObject<FFInputLayerJoin>();
+        join1->setInput(0, readD);
+        join1->setInput(1, reluBias);
+
+        // make the aggregation
+        pdb::Handle<pdb::Computation> myAggregation1 =
+            pdb::makeObject<FFAggMatrix>();
+        myAggregation1->setInput(join1);
+
+        pdb::Handle<pdb::Computation> readE =
+            makeObject<FFMatrixBlockScanner>(database, bo);
+
+        pdb::Handle<pdb::Computation> reluBias1 =
+            pdb::makeObject<FFTransposeBiasSum>();
+        reluBias1->setInput(0, myAggregation1);
+        reluBias1->setInput(1, readE);
+
+        pdb::Handle<pdb::Computation> intermediateWriter =
+            pdb::makeObject<FFMatrixWriter>(database, "yo");
+        intermediateWriter->setInput(reluBias1);
+
+        auto begin0 = std::chrono::high_resolution_clock::now();
+        // run the computation
+        if (!pdbClient.executeComputations(errMsg, "inference-unit-intermediate", false, intermediateWriter)) {
+            cout << "Computation failed. Message was: " << errMsg << "\n";
+            exit(1);
+        }
+        auto end0 = std::chrono::high_resolution_clock::now();
+        std::cout << "Inference-unit Intermediate Stage Time Duration: "
+                  << std::chrono::duration_cast<std::chrono::duration<float>>(end0 - begin0).count()
+                  << " secs." << std::endl;
+
+        pdb::Handle<pdb::Computation> readF =
+            makeObject<FFMatrixBlockScanner>(database, "yo");
+
+        pdb::Handle<pdb::Computation> expSum = pdb::makeObject<FFRowAggregate>();
+        expSum->setInput(readF);
+
+        pdb::Handle<pdb::Computation> softmax = pdb::makeObject<FFOutputLayer>();
+        softmax->setInput(0, readF);
+        softmax->setInput(1, expSum);
+
+        // make the writer
+        pdb::Handle<pdb::Computation> sumWriter =
+            pdb::makeObject<FFMatrixWriter>(database, output);
+        sumWriter->setInput(softmax);
+
+        auto begin = std::chrono::high_resolution_clock::now();
+        // run the computation
+        if (!pdbClient.executeComputations(errMsg, "inference-unit", false, sumWriter)) {
+            cout << "Computation failed. Message was: " << errMsg << "\n";
+            exit(1);
+        }
+        auto end = std::chrono::high_resolution_clock::now();
+        std::cout << "Inference-unit Stage Time Duration: "
+                  << std::chrono::duration_cast<std::chrono::duration<float>>(end - begin).count()
+                  << " secs." << std::endl;
+    }
 }
 
 void loadMatrix(pdb::PDBClient &pdbClient, String dbName, String setName,
@@ -212,6 +313,15 @@ int main(int argc, char *argv[])
   loadLibrary(pdbClient, "libraries/libFFInputLayerJoin.so");
   loadLibrary(pdbClient, "libraries/libFFAggMatrix.so");
 
+// "FFMatrixPartitioner.h"
+// #include "FFReluBiasSum.h"
+// #include "FFTransposeBiasSum.h"
+// #include "SparseMatrixBlock.h"
+// #include "TensorBlock2D.h"
+  loadLibrary(pdbClient, "libraries/libFFMatrixPartitioner.so");
+  loadLibrary(pdbClient, "libraries/libFFReluBiasSum.so");
+  loadLibrary(pdbClient, "libraries/libFFTransposeBiasSum.so");
+
   loadLibrary(pdbClient, "libraries/libMHALayerNorm.so");
   loadLibrary(pdbClient, "libraries/libMHAResConnection.so");
 
@@ -232,16 +342,17 @@ int main(int argc, char *argv[])
   // ff:: setup(pdbClient, "ff");
 
   // if not working add ff::
-  ff::createSet(pdbClient, "ff", "inputs", "inputs", 64);
-  ff::createSet(pdbClient, "ff", "label", "label", 64);
+  ff::createSet(pdbClient, "mha", "inputs", "inputs", 64);
+  ff::createSet(pdbClient, "mha", "label", "label", 64);
 
-  ff::createSet(pdbClient, "ff", "w1", "W1", 64);
-  ff::createSet(pdbClient, "ff", "b1", "B1", 64);
+  ff::createSet(pdbClient, "mha", "w1", "W1", 64);
+  ff::createSet(pdbClient, "mha", "b1", "B1", 64);
 
-  ff::createSet(pdbClient, "ff", "wo", "WO", 64);
-  ff::createSet(pdbClient, "ff", "bo", "BO", 64);
+  ff::createSet(pdbClient, "mha", "w0", "W0", 64);
+  ff::createSet(pdbClient, "mha", "b0", "B0", 64);
 
-  ff::createSet(pdbClient, "ff", "output", "Output", 256);
+  ff::createSet(pdbClient, "mha", "output", "Output", 256);
+  ff::createSet(pdbClient, "mha", "block_output", "Block_Output", 256);
 
   int context_size = 10; // features
   int B = 1;             // batch size
@@ -265,10 +376,12 @@ int main(int argc, char *argv[])
   ff::loadMatrix(pdbClient, "mha", "w1", context_size, 16, block_x, block_y, false, false, errMsg);
   ff::loadMatrix(pdbClient, "mha", "b0", 16, 1, block_x, 1, false, true, errMsg);
   ff::loadMatrix(pdbClient, "mha", "b1", context_size, 1, block_x, 1, false, true, errMsg);
-
+  std::cout << "-----------load matrix---------------: " << "\n";
   double dropout_rate = 0.5;
   {
     const pdb::UseTemporaryAllocationBlock tempBlock{1024 * 1024 * 128};
+    
+    std::cout << "-----------Temp Block---------------: " << "\n";
 
     // ----------------------------------------------
     // make the computation
@@ -314,24 +427,33 @@ int main(int argc, char *argv[])
     pdb::Handle<pdb::Computation> attention = pdb::makeObject<FFTransposeMult>();
     attention->setInput(0, softmax);
     attention->setInput(1, value_matrix);
+    
+    std::cout << "-----------After attention---------------: " << "\n";
 
     pdb::Handle<pdb::Computation> intermediateWriter1 =
         pdb::makeObject<FFMatrixWriter>("mha", "ou");
     intermediateWriter1->setInput(attention);
 
-    ff::inference_unit(pdbClient, "mha", "w1", "wo", "ou", "b1", "bo",
+    std::cout << "-----------Intermediate Writer1---------------: " << "\n";
+
+    inference_unit(pdbClient, "mha", "w1", "w0", "ou", "b1", "b0",
                        "output", dropout_rate);
+
+    std::cout << "-----------After inference unit---------------: " << "\n";
 
     pdb::Handle<pdb::Computation> readG =
         makeObject<FFMatrixBlockScanner>("mha", "output");
     pdb::Handle<pdb::Computation> layernormalization = pdb::makeObject<MHALayerNorm>();
     layernormalization->setInput(0, readG);
     
+    std::cout << "-----------After LayerNorm---------------: " << "\n";
     
+
     pdb::Handle<pdb::Computation> rescon = pdb::makeObject<MHAResConnection>();
     rescon->setInput(0, readA);
     rescon->setInput(1, layernormalization);
 
+    std::cout << "-----------After res connection---------------: " << "\n";
 
     // make the writer
     pdb::Handle<pdb::Computation> myWriter = pdb::makeObject<FFMatrixWriter>("mha", "block_output");
@@ -348,12 +470,12 @@ int main(int argc, char *argv[])
   {
     const pdb::UseTemporaryAllocationBlock tempBlock{1024 * 1024 * 128};
 
-    print_stats(pdbClient, "mha", "ou");
-    print_stats(pdbClient, "mha", "input");
-    print_stats(pdbClient, "mha", "output");
-    print_stats(pdbClient, "mha", "w_k");
-    print_stats(pdbClient, "mha", "w_q");
-    print_stats(pdbClient, "mha", "w_v");
+    // print_stats(pdbClient, "mha", "ou");
+    // print_stats(pdbClient, "mha", "input");
+    // print_stats(pdbClient, "mha", "output");
+    // print_stats(pdbClient, "mha", "w_k");
+    // print_stats(pdbClient, "mha", "w_q");
+    // print_stats(pdbClient, "mha", "w_v");
   }
 
   return 0;
